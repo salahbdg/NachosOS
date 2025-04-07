@@ -204,10 +204,10 @@ void Lock::Acquire() {
     }
     // once the thread is woken up, it will be put back on the ready list
 
+    g_machine->interrupt->SetStatus(INTERRUPTS_ON);
+
+
     return ;
-
-
-    
 
 }
 
@@ -221,7 +221,15 @@ void Lock::Acquire() {
 */
 //----------------------------------------------------------------------
 void Lock::Release() {
-    printf("**** Warning: method Lock::Release is not implemented yet\n");
+    //printf("**** Warning: method Lock::Release is not implemented yet\n");
+
+    //printf("Lock::Release: %s\n", name);
+    // disable interrupts to make this atomic
+    g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
+    if (g_current_thread != owner) {
+        printf("**** Warning: Lock::Release: current thread does not own the lock\n");
+        exit(ERROR);
+    }
 
     exit(ERROR);
 
