@@ -190,7 +190,7 @@ Lock::~Lock() {
 void Lock::Acquire() {
     //printf("**** Warning: method Lock::Acquire is not implemented yet\n");
 
-    //printf("Lock::Acquire: %s\n", name);
+    printf("Lock::Acquire: %s\n", name);
     // disable interrupts to make this atomic
     g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
     if (free) {
@@ -223,13 +223,15 @@ void Lock::Acquire() {
 void Lock::Release() {
     //printf("**** Warning: method Lock::Release is not implemented yet\n");
 
-    //printf("Lock::Release: %s\n", name);
+    printf("Lock::Release: %s\n", name);
     // disable interrupts to make this atomic
     g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
     if (g_current_thread != owner) {
         printf("**** Warning: Lock::Release: current thread does not own the lock\n");
         exit(ERROR);
     }
+
+    
 
     exit(ERROR);
 
