@@ -121,7 +121,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     // System calls
     // -------------
     switch(type) {
-	char msg[MAXSTRLEN]; // Argument for the PError system call
+    char msg[MAXSTRLEN]; // Argument for the PError system call
 
     case SC_HALT: 
       // The halt system call. Stops Nachos.
@@ -628,6 +628,392 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       }
       break;
     }
+
+    #ifdef ETUDIANTS_TP
+    // Appels système de synchronisation pour Nachos
+    //Numéro d'appel système dans le registre a7 (x17)
+    //Paramètres dans a0-a3 (x10-x13)  
+    //Valeur de retour dans a0 (x10)
+
+    case SC_SEM_CREATE: {
+      // L'appel système SemCreate
+      // Crée un nouveau sémaphore avec une valeur initiale
+      DEBUG('e', (char*)"Synchronization: SemCreate call.\n");
+      int count;
+      int name_addr;
+      int size;
+      int ret;
+      
+      // Récupération du nom du sémaphore (registre a0/x10)
+      name_addr = g_machine->ReadIntRegister(10);
+      // Récupération de la valeur initiale (registre a1/x11)
+      count = g_machine->ReadIntRegister(11);
+      
+      size = GetLengthParam(name_addr);
+      char name[size];
+      GetStringParam(name_addr, name, size);
+      
+      // Création du sémaphore
+      Semaphore *sem = new Semaphore(name, count);
+      if (sem != NULL) {
+        // Ajout du sémaphore à la table des objets et récupération de son ID
+        ret = g_object_addrs->AddObject(sem);
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        g_syscall_error->SetMsg(name, OUT_OF_MEMORY);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_SEM_DESTROY: {
+      // L'appel système SemDestroy
+      // Détruit un sémaphore
+      DEBUG('e', (char*)"Synchronization: SemDestroy call.\n");
+      int64_t semid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du sémaphore (registre a0/x10)
+      semid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet sémaphore
+      Semaphore *sem = (Semaphore *)g_object_addrs->SearchObject(semid);
+      if (sem && sem->type == SEMAPHORE_TYPE) {
+        // Suppression de la table des objets et destruction
+        g_object_addrs->RemoveObject(semid);
+        delete sem;
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, semid);
+        g_syscall_error->SetMsg(msg, INVALID_SEMAPHORE_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_P: {
+      // L'appel système P (wait/down)
+      // Opération P sur un sémaphore (décrémentation)
+      DEBUG('e', (char*)"Synchronization: P call.\n");
+      int64_t semid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du sémaphore (registre a0/x10)
+      semid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet sémaphore et vérification du type
+      Semaphore *sem = (Semaphore *)g_object_addrs->SearchObject(semid);
+      if (sem && sem->type == SEMAPHORE_TYPE) {
+        // Exécution de l'opération P
+        sem->P();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, semid);
+        g_syscall_error->SetMsg(msg, INVALID_SEMAPHORE_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_V: {
+      // L'appel système V (signal/up)
+      // Opération V sur un sémaphore (incrémentation)
+      DEBUG('e', (char*)"Synchronization: V call.\n");
+      int64_t semid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du sémaphore (registre a0/x10)
+      semid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet sémaphore et vérification du type
+      Semaphore *sem = (Semaphore *)g_object_addrs->SearchObject(semid);
+      if (sem && sem->type == SEMAPHORE_TYPE) {
+        // Exécution de l'opération V
+        sem->V();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, semid);
+        g_syscall_error->SetMsg(msg, INVALID_SEMAPHORE_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_LOCK_CREATE: {
+      // L'appel système LockCreate
+      // Crée un nouveau verrou
+      DEBUG('e', (char*)"Synchronization: LockCreate call.\n");
+      int name_addr;
+      int size;
+      int ret;
+      
+      // Récupération du nom du verrou (registre a0/x10)
+      name_addr = g_machine->ReadIntRegister(10);
+      
+      size = GetLengthParam(name_addr);
+      char name[size];
+      GetStringParam(name_addr, name, size);
+      
+      // Création du verrou
+      Lock *lock = new Lock(name);
+      if (lock != NULL) {
+        // Ajout du verrou à la table des objets et récupération de son ID
+        ret = g_object_addrs->AddObject(lock);
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        g_syscall_error->SetMsg(name, OUT_OF_MEMORY);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_LOCK_DESTROY: {
+      // L'appel système LockDestroy
+      // Détruit un verrou
+      DEBUG('e', (char*)"Synchronization: LockDestroy call.\n");
+      int64_t lockid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du verrou (registre a0/x10)
+      lockid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet verrou et vérification du type
+      Lock *lock = (Lock *)g_object_addrs->SearchObject(lockid);
+      if (lock && lock->type == LOCK_TYPE) {
+        // Suppression de la table des objets et destruction
+        g_object_addrs->RemoveObject(lockid);
+        delete lock;
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, lockid);
+        g_syscall_error->SetMsg(msg, INVALID_LOCK_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_LOCK_ACQUIRE: {
+      // L'appel système LockAcquire
+      // Acquiert un verrou
+      DEBUG('e', (char*)"Synchronization: LockAcquire call.\n");
+      int64_t lockid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du verrou (registre a0/x10)
+      lockid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet verrou et vérification du type
+      Lock *lock = (Lock *)g_object_addrs->SearchObject(lockid);
+      if (lock && lock->type == LOCK_TYPE) {
+        // Acquisition du verrou
+        lock->Acquire();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, lockid);
+        g_syscall_error->SetMsg(msg, INVALID_LOCK_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_LOCK_RELEASE: {
+      // L'appel système LockRelease
+      // Libère un verrou
+      DEBUG('e', (char*)"Synchronization: LockRelease call.\n");
+      int64_t lockid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID du verrou (registre a0/x10)
+      lockid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet verrou et vérification du type
+      Lock *lock = (Lock *)g_object_addrs->SearchObject(lockid);
+      if (lock && lock->type == LOCK_TYPE) {
+        // Libération du verrou
+        lock->Release();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, lockid);
+        g_syscall_error->SetMsg(msg, INVALID_LOCK_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_COND_CREATE: {
+      // L'appel système CondCreate
+      // Crée une nouvelle variable de condition
+      DEBUG('e', (char*)"Synchronization: CondCreate call.\n");
+      int name_addr;
+      int size;
+      int ret;
+      
+      // Récupération du nom de la variable de condition (registre a0/x10)
+      name_addr = g_machine->ReadIntRegister(10);
+      
+      size = GetLengthParam(name_addr);
+      char name[size];
+      GetStringParam(name_addr, name, size);
+      
+      // Création de la variable de condition
+      Condition *cond = new Condition(name);
+      if (cond != NULL) {
+        // Ajout de la condition à la table des objets et récupération de son ID
+        ret = g_object_addrs->AddObject(cond);
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        g_syscall_error->SetMsg(name, OUT_OF_MEMORY);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_COND_DESTROY: {
+      // L'appel système CondDestroy
+      // Détruit une variable de condition
+      DEBUG('e', (char*)"Synchronization: CondDestroy call.\n");
+      int64_t condid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID de la variable de condition (registre a0/x10)
+      condid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet condition et vérification du type
+      Condition *cond = (Condition *)g_object_addrs->SearchObject(condid);
+      if (cond && cond->type == CONDITION_TYPE) {
+        // Suppression de la table des objets et destruction
+        g_object_addrs->RemoveObject(condid);
+        delete cond;
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, condid);
+        g_syscall_error->SetMsg(msg, INVALID_CONDITION_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_COND_WAIT: {
+      // L'appel système CondWait
+      // Attend sur une variable de condition avec verrou associé
+      DEBUG('e', (char*)"Synchronization: CondWait call.\n");
+      int64_t condid, lockid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID de la variable de condition (registre a0/x10)
+      condid = g_machine->ReadIntRegister(10);
+      // Récupération de l'ID du verrou (registre a1/x11)
+      lockid = g_machine->ReadIntRegister(11);
+      
+      // Recherche des objets condition et verrou avec vérification des types
+      Condition *cond = (Condition *)g_object_addrs->SearchObject(condid);
+      Lock *lock = (Lock *)g_object_addrs->SearchObject(lockid);
+      
+      if (cond && cond->type == CONDITION_TYPE && 
+          lock && lock->type == LOCK_TYPE) {
+        // Attente sur la condition avec le verrou
+        cond->Wait();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        if (!cond || cond->type != CONDITION_TYPE) {
+          sprintf(msg, "%" PRId64, condid);
+          g_syscall_error->SetMsg(msg, INVALID_CONDITION_ID);
+        } else {
+          sprintf(msg, "%" PRId64, lockid);
+          g_syscall_error->SetMsg(msg, INVALID_LOCK_ID);
+        }
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_COND_SIGNAL: {
+      // L'appel système CondSignal
+      // Signale une variable de condition
+      DEBUG('e', (char*)"Synchronization: CondSignal call.\n");
+      int64_t condid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID de la variable de condition (registre a0/x10)
+      condid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet condition et vérification du type
+      Condition *cond = (Condition *)g_object_addrs->SearchObject(condid);
+      if (cond && cond->type == CONDITION_TYPE) {
+        // Signal de la condition
+        cond->Signal();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, condid);
+        g_syscall_error->SetMsg(msg, INVALID_CONDITION_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+
+    case SC_COND_BROADCAST: {
+      // L'appel système CondBroadcast
+      // Réveille tous les threads en attente sur une variable de condition
+      DEBUG('e', (char*)"Synchronization: CondBroadcast call.\n");
+      int64_t condid;
+      int ret = NO_ERROR;
+      
+      // Récupération de l'ID de la variable de condition (registre a0/x10)
+      condid = g_machine->ReadIntRegister(10);
+      
+      // Recherche de l'objet condition et vérification du type
+      Condition *cond = (Condition *)g_object_addrs->SearchObject(condid);
+      if (cond && cond->type == CONDITION_TYPE) {
+        // Broadcast vers tous les threads en attente
+        cond->Broadcast();
+        g_syscall_error->SetMsg((char*)"", NO_ERROR);
+      } else {
+        ret = ERROR;
+        sprintf(msg, "%" PRId64, condid);
+        g_syscall_error->SetMsg(msg, INVALID_CONDITION_ID);
+      }
+      
+      // Écriture du code de retour dans le registre a0 (x10)
+      g_machine->WriteIntRegister(10, ret);
+      break;
+    }
+    #endif
       
     case SC_MMAP:{
       // Map a file in memory
