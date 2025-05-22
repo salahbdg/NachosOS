@@ -652,7 +652,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_DEBUG:{
       // Map a file in memory
       DEBUG('e', (char*)"Nachos: debug system call.\n");
-      printf("Debug system call: parameter %llx\n",g_machine->ReadIntRegister(10));
+      printf("Debug system call: parameter %lx\n",g_machine->ReadIntRegister(10));
       break;
     }
 	    

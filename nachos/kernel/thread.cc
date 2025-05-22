@@ -110,15 +110,41 @@ Thread::~Thread()
 // \return NO_ERROR on success, an error code on error
 */
 //----------------------------------------------------------------------
+#ifndef ETUDIANTS_TP
 int Thread::Start(Process *owner,
 		  int64_t func, int64_t arg)
 {
   ASSERT(process == NULL);
-  printf("**** Warning: method Thread::Start is not implemented yet\n");
+  printf("**** Warning: method Thread::Start is not implemented yet kkhkhkh\n");
 
   exit(ERROR);
 
 }
+#endif
+
+#ifdef ETUDIANTS_TP
+int Thread::Start(Process *owner, int64_t func, int64_t arg){
+	
+	IntStatus oldLevel = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
+	
+	ASSERT(process == NULL);
+	DEBUG('t', (char *)"Init. and start thread %s.\n", GetName());
+	
+	//Modifications "internes" au thread
+	process = owner;
+	process->numThreads++;
+	
+	InitSimulatorContext(AllocBoundedArray(SIMULATORSTACKSIZE), SIMULATORSTACKSIZE);
+	InitThreadContext(func, process->addrspace->StackAllocate(), arg);
+	
+	g_alive->Append(this);
+	g_scheduler->ReadyToRun(this);
+
+	g_machine->interrupt->SetStatus(oldLevel);
+	
+	return 0;
+}
+#endif
 
 //----------------------------------------------------------------------
 // Thread::InitThreadContext
@@ -259,6 +285,8 @@ Thread::CheckOverflow()
 //	between setting g_thread_to_be_destroyed and going to sleep.
 */
 //----------------------------------------------------------------------
+
+#ifndef ETUDIANTS_TP
 void
 Thread::Finish ()
 {
@@ -273,6 +301,23 @@ Thread::Finish ()
   Sleep();  // invokes SWITCH
 
  }
+#endif
+
+#ifdef ETUDIANTS_TP
+void
+Thread::Finish ()
+{
+	IntStatus oldLevel = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
+	
+	DEBUG('t', (char *)"Finishing thread \"%s\"\n", GetName());
+	g_thread_to_be_destroyed = this;
+	
+	// Go to sleep
+	Sleep();  // invokes SWITCH
+	
+	g_machine->interrupt->SetStatus(oldLevel);
+}
+#endif
 
 //----------------------------------------------------------------------
 // Thread::Yield
@@ -359,6 +404,7 @@ Thread::Sleep ()
 /*!	Save the CPU state of a user program on a context switch
 */
 //----------------------------------------------------------------------
+#ifndef ETUDIANTS_TP
 void
 Thread::SaveProcessorState()
 {
@@ -367,13 +413,46 @@ Thread::SaveProcessorState()
   exit(ERROR);
 
 }
+#endif
 
+#ifdef ETUDIANTS_TP
+
+void Thread::SaveProcessorState()
+{
+	int i;	
+	IntStatus oldLevel = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
+	    
+    DEBUG('t', (char*)"THREAD: Save processor state in thread %s.\n", GetName());
+    
+	/*
+		Sauvegarde du thread_context
+	*/
+	
+	//Sauvegarde de tous les registres entiers
+	for(i=0; i<NUM_INT_REGS;i++){
+	
+		thread_context.int_registers[i] = g_machine->int_registers[i];
+	}
+	
+	//Sauvegarde de tous les registres flottants
+	for(i=0; i<NUM_FP_REGS;i++){
+	
+		thread_context.float_registers[i] = g_machine->float_registers[i];
+	}
+	
+	//Sauvegarde du registre de condition
+	thread_context.pc = (char)g_machine->pc;
+	
+	g_machine->interrupt->SetStatus(oldLevel);
+}
+
+#endif
 //----------------------------------------------------------------------
 // Thread::RestoreProcessorState
 /*!	Restore the CPU state of a user program on a context switch.
 */
 //----------------------------------------------------------------------
-
+#ifndef ETUDIANTS_TP
 void
 Thread::RestoreProcessorState()
 {
@@ -382,6 +461,42 @@ Thread::RestoreProcessorState()
   exit(ERROR);
 
 }
+#endif
+
+#ifdef ETUDIANTS_TP
+void
+Thread::RestoreProcessorState()
+{
+	
+	int i;
+	IntStatus oldLevel = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
+    DEBUG('t', (char*)"THREAD: Restoring processor state from thread %s.\n", GetName());
+    
+	/*
+		Restauration du thread_context
+	*/
+	
+	//Restauration de tous les registres entiers
+	for(i=0; i<NUM_INT_REGS;i++){
+	
+		g_machine->int_registers[i] = thread_context.int_registers[i];
+	}
+	
+	//Restauration de tous les registres flottants
+	for(i=0; i<NUM_FP_REGS;i++){
+	
+		g_machine->float_registers[i] = thread_context.float_registers[i];
+	}
+	
+	//Restauration du registre de condition
+	g_machine->pc = (int8_t)thread_context.pc;
+	
+	// Restauration de la table de translation 
+	g_machine->mmu->translationTable = process->addrspace->translationTable;
+	
+	g_machine->interrupt->SetStatus(oldLevel);
+}
+#endif
 
 //----------------------------------------------------------------------
 // Thread::SaveSimulatorState

@@ -120,10 +120,17 @@ Thread *oldThread = g_current_thread;
     	// kernelContext structure such that it goes on executing when
     	// it was last interrupted
     	nextThread->RestoreProcessorState();
-	nextThread->RestoreSimulatorState();
+    	nextThread->RestoreSimulatorState();
     }
 
     DEBUG('t', (char *)"Now in thread \"%s\" time %llu\n", g_current_thread->GetName(),g_stats->getTotalTicks());
+
+    if (g_thread_to_be_destroyed != NULL) {
+        DEBUG('t', (char *)"Deleting thread \"%s\"\n", g_thread_to_be_destroyed->GetName());
+        delete g_thread_to_be_destroyed;
+        g_thread_to_be_destroyed = NULL;
+    }
+  
 
     // If the old thread gave up the processor because it was finishing,
 
@@ -133,7 +140,7 @@ Thread *oldThread = g_current_thread;
 
     // point, we were still running on the old thread's stack!
 
-  printf("**** Warning: thread actual deletion not implemented yet\n");
+    printf("**** Warning: %s thread actual deletion not implemented yet\n", g_current_thread->GetName());
 
 
 }
