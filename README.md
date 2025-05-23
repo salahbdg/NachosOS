@@ -21,11 +21,11 @@ Ce travail nous a permis de comprendre comment fonctionnent :
 
 ---
 
-## 📁 Fichiers modifiés et fonctions implémentées
+##  Fichiers modifiés et fonctions implémentées
 
 ---
 
-### 🔹 `kernel/synch.h` et `kernel/synch.cc`
+###  `kernel/synch.h` et `kernel/synch.cc`
 
 ####  `Semaphore::P()` (wait)
 - Désactive les interruptions
@@ -65,7 +65,7 @@ Ce travail nous a permis de comprendre comment fonctionnent :
 
 ---
 
-### 🔹 `kernel/thread.cc` et `kernel/thread.h`
+###  `kernel/thread.cc` et `kernel/thread.h`
 
 ####  `Thread::Start()`
 - Initialise le contexte du thread
@@ -88,4 +88,50 @@ Ce travail nous a permis de comprendre comment fonctionnent :
 
 ####  `Thread::SaveProcessorState()`  
 - Sauvegarde les registres du thread courant avant un switch
+# TP2
+
+L’objectif du TP2 était d’implémenter un driver de communication série (ACIA) dans NachOS.  
+Ce driver permet :
+- l’**envoi de messages vers la console caractère par caractère
+- la réception de messages depuis la console
+- en utilisant des interruptions
+
+---
+
+
+
+##  Fichier : `drvACIA.cc`  
+###  Fonctions implémentées
+
+---
+
+###  `TtySend(char* buff)`
+- Copie le message dans `send_buffer`
+- Envoie le premier caractère avec `PutChar()`
+- Se bloque ensuite avec `send_sema->P()` jusqu’à ce que tout soit envoyé
+- C’est `InterruptSend()` qui envoie les caractères suivants
+
+---
+
+### `InterruptSend()`
+- Appelée automatiquement après chaque caractère envoyé
+- Incrémente `ind_send` et envoie le caractère suivant
+- Si on atteint la fin (`'\0'`), on appelle `send_sema->V()` pour réveiller le thread bloqué
+
+---
+
+### 🔸 `TtyReceive(char* buff, int lg)`
+- Se bloque avec `receive_sema->P()` jusqu'à la réception complète d’un message
+- Copie les caractères depuis `receive_buffer` vers `buff`
+- Ajoute un `'\0'` à la fin
+- Retourne le nombre de caractères copiés
+
+---
+
+### 🔸 `InterruptReceive()`
+- Appelée à chaque réception d’un caractère
+- Stocke le caractère dans `receive_buffer[ind_rec]`
+- Si c’est la fin (`'\0'`), on termine la chaîne et appelle `receive_sema->V()`
+
+---
 
