@@ -1,3 +1,5 @@
+# NachOS – TP1 & TP2
+Travail réalisé par : **BOUDGUIGUE Salah** & **CHERIF Mey**  
 # NachosOS
 Build a simple emulated OS
 
@@ -10,8 +12,8 @@ L’intérêt est de pouvoir manipuler directement les composants d’un OS (thr
 
 Le projet est compsé de deux parties:
 
-- 🔹 TP1 : les **mécanismes de synchronisation entre threads**
-- 🔹 TP2 : la **gestion des communications série** avec l’ACIA (console asynchrone)
+-  TP1 : les **mécanismes de synchronisation entre threads**
+-  TP2 : la **gestion des communications série** avec l’ACIA (console asynchrone)
 ans ce premier TP, nous avons implémenté les mécanismes de **synchronisation entre threads** dans NachOS.  
 Ce travail nous a permis de comprendre comment fonctionnent :
 - les **sémaphores**,
@@ -120,7 +122,7 @@ Ce driver permet :
 
 ---
 
-### 🔸 `TtyReceive(char* buff, int lg)`
+### `TtyReceive(char* buff, int lg)`
 - Se bloque avec `receive_sema->P()` jusqu'à la réception complète d’un message
 - Copie les caractères depuis `receive_buffer` vers `buff`
 - Ajoute un `'\0'` à la fin
@@ -128,10 +130,27 @@ Ce driver permet :
 
 ---
 
-### 🔸 `InterruptReceive()`
+###  `InterruptReceive()`
 - Appelée à chaque réception d’un caractère
 - Stocke le caractère dans `receive_buffer[ind_rec]`
 - Si c’est la fin (`'\0'`), on termine la chaîne et appelle `receive_sema->V()`
 
 ---
+##  Conclusion
+Ce travail nous permis d'apprendre :
+- à gérer les threads, sémaphores, verrous et conditions
+- à configurer et utiliser un driver matériel émulé (ACIA)
+- à synchroniser correctement les accès mémoire et les files d’attente
+---
+## Points d’amélioration
+Nous avons pas pu mettre en palce les tests.
+
+---
+
+## Compilation
+make clean 
+make 
+./nachos
+
+
 
